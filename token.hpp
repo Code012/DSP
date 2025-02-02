@@ -13,7 +13,7 @@ Date: 19/01/2025
 #include <cstdio>
 #include <cstdint>
 
-using TokenType = std::string;
+using TokenType = std::string;  // string for debugging purposes, will change to int later
 
 class Token {
     public:
@@ -35,6 +35,8 @@ const TokenType VAR = "VAR";
 
 const TokenType LPAREN = "LPAREN";
 const TokenType RPAREN = "RPAREN";
+
+const TokenType FUNC = "FUNC";
 
 const TokenType ILLEGAL = "ILLEGAL";
 
