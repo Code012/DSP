@@ -4,20 +4,15 @@ parse.hpp
 Author: 
 Data: 25/01/2025
 */
-//* IMPORTANT FIX
-// * https://stackoverflow.com/questions/20187587/what-is-the-difference-between-dynamic-dispatch-and-late-binding-in-c
-// * Dynamic dispatch is what you are looking for
-//* Also methods have to be virtual inorder for them to be overwritten
+
 // // g++ -Wall -std=c++20 -g -O0 -mconsole -o BIN/main Mathly/main.cpp Mathly/lexer.cpp
-// you have to use visitor pattern to allow nodes to keep their types.
+// TODO: use visitor pattern for eval/simplification stage
 
 #include <unordered_map>
 #include <vector>
 #include "ast.hpp"
 #include "lexer.hpp"
 #include "token.hpp"
-
-//* ALSO IMPLEMENT PARSER TRACING AT THE END, LOOK AT THORSTEN
 
 const int LOWEST = 0;
 const int SUM = 10;

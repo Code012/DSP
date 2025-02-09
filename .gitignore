@@ -1,0 +1,7 @@
+# ignore all object and exe files
+*.o
+*.exe
+
+# ignore all build folders
+build/
+test/build
