@@ -20,6 +20,7 @@ Date 26/01/2025
 //         std::vector<ExpressionNode> Expressions;
 // };
 
+//TODO: Implement visitor pattern when on the evaluation stage to decouple eval/simplification logic from ast
 // Base class for all expressions
 class ExpressionNode {
     public: 
@@ -55,8 +56,8 @@ class VariableExpressionNode : public ExpressionNode {
 
 class PrefixExpressionNode : public ExpressionNode {
     public:
-        Token Tok;        // prefix token, e.g. - for negative numbers    
         char Operator;
+        Token Tok;        // prefix token, e.g. - for negative numbers    
         std::unique_ptr<ExpressionNode> Right;
 
         std::string TokenLiteral() override { return Tok.Literal; };
@@ -73,8 +74,8 @@ class PrefixExpressionNode : public ExpressionNode {
             return result;
          };
 
-         PrefixExpressionNode(char Op, Token &tok, std::unique_ptr<ExpressionNode> Right) 
-                : Tok(tok), Operator(Op), Right(std::move(Right)) {}
+         PrefixExpressionNode(char Op, Token &tok, std::unique_ptr<ExpressionNode> Right = nullptr) 
+                : Operator(Op), Tok(tok), Right(std::move(Right)) {}
 };
 
 class InfixExpressionNode : public ExpressionNode {
@@ -98,7 +99,7 @@ class InfixExpressionNode : public ExpressionNode {
             return result;
          };
 
-         InfixExpressionNode(char Op, Token &tok, std::unique_ptr<ExpressionNode> Left, std::unique_ptr<ExpressionNode> Right) 
+         InfixExpressionNode(Token &tok, char Op,  std::unique_ptr<ExpressionNode> Left, std::unique_ptr<ExpressionNode> Right = nullptr) 
                 : Tok(tok), Operator(Op), Left(std::move(Left)), Right(std::move(Right)) {}
 };
 
