@@ -5,32 +5,36 @@ Author:
 Data: 25/01/2025
 */
 
+//TODO: use visitor pattern for eval/simplify stage
 // // g++ -Wall -std=c++20 -g -O0 -mconsole -o BIN/main Mathly/main.cpp Mathly/lexer.cpp
-// TODO: use visitor pattern for eval/simplification stage
 
 #include <unordered_map>
 #include <vector>
+#include <cstdint>
 #include "ast.hpp"
 #include "lexer.hpp"
 #include "token.hpp"
 
 const int LOWEST = 0;
-const int SUM = 10;
-const int PRODUCT = 20;
-const int PREFIX = 30;
+const int ADDITIVE = 10;
+const int MULTIPLICATIVE = 20;
+const int UNARY = 30;
 
 // left binding power
 static std::map<TokenType, int> precedenceList = {
-    {token::PLUS, SUM},
-    {token::MINUS, SUM},
-    {token::DIV, PRODUCT},
-    {token::MULT, PRODUCT},
+    {token::PLUS, ADDITIVE},
+    {token::MINUS, ADDITIVE},
+    {token::DIV, MULTIPLICATIVE},
+    {token::MULT, MULTIPLICATIVE},
 };
+
 
 class ExpressionNode;
 class Parser;
+uint64_t str_to_u64(std::string new_str);
 
-using prefixParseFn = std::unique_ptr<ExpressionNode> (Parser::*)(void);
+//function pointer types for LEDs and NUDs
+using prefixParseFn = std::unique_ptr<ExpressionNode> (Parser::*)(void); 
 using infixParseFn = std::unique_ptr<ExpressionNode> (Parser::*)(std::unique_ptr<ExpressionNode> );
 
 class Parser {
@@ -49,21 +53,20 @@ class Parser {
 
         Parser(Lexer& l) : lexer(l) {
             registerPrefix(token::VAR, parseVariable);
-            //registerPrefix(token::MINUS, parsePrefixExpression);
+            registerPrefix(token::INT, parseNumber);
+            registerPrefix(token::MINUS, parsePrefixExpression);
+
+            registerInfix(token::PLUS, parseInfixExpression);
+            registerInfix(token::MINUS, parseInfixExpression);
+            registerInfix(token::MULT, parseInfixExpression);
+            registerInfix(token::DIV, parseInfixExpression);
+
 
             nextToken();
             nextToken();
 
             
         };
-
-        // Expression* parse() {
-        //     // if (curToken.Type == token::FUNC) {
-        //     //     return parseFuncExpression();
-        //     // } else {
-        //     return parseExpression();
-            
-        // }
 
         void nextToken() {
             curToken = peekToken;
@@ -97,7 +100,7 @@ class Parser {
         };
 
         void noPrefixParseFnError(TokenType t) {
-            std::string msg = "no prefix aprse funtion for " + t + " found";
+            std::string msg = "no prefix parse funtion for " + t + " found";
             errors.push_back(msg);
         }
 
@@ -132,36 +135,57 @@ class Parser {
             
         };
 
+        /*
+        First parse the NUD,
+        While we haven't reached the end and the bp of the next token is > bp of current token
+            Continue parsing left hand side
+        */
         std::unique_ptr<ExpressionNode> parseExpression(int precedence) {
-            if (prefixParseFnList.count(curToken.Type)) {
-                prefixParseFn prefix = prefixParseFnList.at(curToken.Type);
-                std::unique_ptr<ExpressionNode> leftExpr = (this->*prefix)();   // took a while to figure out. have to dereference pointer first
 
-                while ((peekTokenIs(token::EOL)) && (precedence < peekPrecedence())) {
-                    infixParseFn infix;
+            // If the relevant prefix function (NUD) exists for the token, then
+            // then get the function pointer to it and call it and store in leftExpr
+            std::unique_ptr<ExpressionNode> leftExpr;
 
-                    if (infixParseFnList.count(peekToken.Type) == 0) {
-                        return leftExpr;
-                    } else {
-                        infix = infixParseFnList.at(peekToken.Type);
-                    }
-
-                    nextToken();
-
-                    leftExpr = (this->*infix)(std::move(leftExpr));
-                }
-
-                return leftExpr;
-
+            if (prefixParseFnList.count(curToken.Type)) { 
+                prefixParseFn prefix = prefixParseFnList.at(curToken.Type); // NUD
+                leftExpr = (this->*prefix)();   // took a while to figure out. have to dereference pointer first
             } else {
                 noPrefixParseFnError(curToken.Type);
                 return nullptr;
             }
+
+            // While we haven't reached the end, or the next token bp > current token bp
+            // Continue parsing the left hand side
+            while ((!peekTokenIs(token::EOL)) && (precedence < peekPrecedence())) {
+                infixParseFn infix; //LED
+
+                if (infixParseFnList.count(peekToken.Type)) {
+                    infix = infixParseFnList.at(peekToken.Type);
+                } else {
+                    return leftExpr;
+                }
+
+                nextToken();
+
+                leftExpr = (this->*infix)(std::move(leftExpr));
+            }
+
+            return leftExpr;
+
+            
         }
 
         int peekPrecedence() {
             if (precedenceList.count(peekToken.Type)) {
                 return precedenceList.at(peekToken.Type);
+            } else {
+                return LOWEST;
+            }
+        }
+
+        int currentPrecedence() {
+            if (precedenceList.count(curToken.Type)) {
+                return precedenceList.at(curToken.Type);
             } else {
                 return LOWEST;
             }
@@ -176,6 +200,34 @@ class Parser {
         //     expr = PrefixExpressionNode();
         // }
 
+        std::unique_ptr<ExpressionNode> parseNumber() {
+
+            //TODO: perhaps some error handling for conversion
+            return std::make_unique<NumberExpressionNode>(curToken, str_to_u64(curToken.Literal));
+        }
+
+        std::unique_ptr<ExpressionNode> parsePrefixExpression() {
+            // operand first
+            std::unique_ptr<PrefixExpressionNode> expr = std::make_unique<PrefixExpressionNode>(*(curToken.Literal.c_str()), curToken);
+            nextToken(); // consume prefix operand
+
+            // now number
+            expr->Right = parseExpression(UNARY);
+
+            return expr;
+        }
+
+        std::unique_ptr<ExpressionNode> parseInfixExpression(std::unique_ptr<ExpressionNode> left) {
+            //first left and operand
+            std::unique_ptr<InfixExpressionNode> expr = std::make_unique<InfixExpressionNode>(curToken, *(curToken.Literal.c_str()), std::move(left), nullptr);
+
+            int precedence = currentPrecedence(); // get lbp
+            nextToken();
+            expr->Right = parseExpression(precedence);
+
+            return expr;
+        }
+
 
         void registerPrefix(TokenType toktype, prefixParseFn fn) {
             prefixParseFnList.emplace(toktype, fn);
@@ -187,3 +239,13 @@ class Parser {
 
 
 };
+
+// Helper Functions
+uint64_t str_to_u64(std::string new_str) {
+    uint64_t val = 0;
+    for (auto ch : new_str) {
+        if (not isNumber(ch)) return 0;
+        val = 10 * val + (ch - '0');
+    }
+    return val;
+}
