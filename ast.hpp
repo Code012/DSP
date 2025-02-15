@@ -14,6 +14,7 @@ Date 26/01/2025
 #include <sstream>
 #include "token.hpp"
 
+using u64 = uint64_t;
 
 // class Program {
 //     public:
@@ -34,12 +35,12 @@ class ExpressionNode {
 class NumberExpressionNode : public ExpressionNode {
     public:
         Token Tok;   
-        double Value;
+        u64 Value;
 
         std::string TokenLiteral() override { return Tok.Literal; };
         std::string String() override { return Tok.Literal; };
 
-        NumberExpressionNode(Token tok, double Val) : Tok(tok), Value(Val) {}
+        NumberExpressionNode(Token tok, u64 Val) : Tok(tok), Value(Val) {}
 };
 
 class VariableExpressionNode : public ExpressionNode {
