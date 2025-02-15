@@ -29,12 +29,17 @@ const TokenType MINUS = "MINUS";
 const TokenType MULT = "MULT";
 const TokenType DIV = "DIV";
 
+const TokenType IMPLICIT_MULT = "IMPLICIT_MULT";
+
 const TokenType INT = "INT";
 
 const TokenType VAR = "VAR";
 
 const TokenType LPAREN = "LPAREN";
 const TokenType RPAREN = "RPAREN";
+
+const TokenType VAR_NUM = "VAR_NUM";
+const TokenType NUM_VAR = "NUM_VAR";
 
 const TokenType FUNC = "FUNC";
 

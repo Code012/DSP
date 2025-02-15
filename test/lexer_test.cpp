@@ -38,9 +38,10 @@ Date: 20/02/2025
         testTable.push_back(testToken{token::EOL, "$"});
 
         Lexer lexer = Lexer(input);
+        std::vector<Token> tokens = lexer.lex();
 
         for (size_t i=0; i < testTable.size(); i++) {
-            const Token tok = lexer.nextToken();
+            const Token tok = tokens[i];
             const testToken test = testTable[i];
             
              TEST_MESSAGE(

@@ -19,6 +19,7 @@ const int LOWEST = 0;
 const int ADDITIVE = 10;
 const int MULTIPLICATIVE = 20;
 const int UNARY = 30;
+const int IMPLICIT_MULT = 21;
 
 // left binding power
 static std::map<TokenType, int> precedenceList = {
@@ -26,6 +27,7 @@ static std::map<TokenType, int> precedenceList = {
     {token::MINUS, ADDITIVE},
     {token::DIV, MULTIPLICATIVE},
     {token::MULT, MULTIPLICATIVE},
+    {token::IMPLICIT_MULT, IMPLICIT_MULT}
 };
 
 
@@ -42,6 +44,7 @@ class Parser {
         Lexer lexer;
         std::vector<std::string> errors;
 
+
         Token curToken;
         Token peekToken;
 
@@ -52,14 +55,22 @@ class Parser {
         std::unordered_map<TokenType, infixParseFn> infixParseFnList;
 
         Parser(Lexer& l) : lexer(l) {
+            lexer.lex();
+
             registerPrefix(token::VAR, parseVariable);
             registerPrefix(token::INT, parseNumber);
             registerPrefix(token::MINUS, parsePrefixExpression);
+            registerPrefix(token::LPAREN, parseGroupedExpression);
+            // registerPrefix(token::VAR_NUM, parseVarNumPair);
+            // registerPrefix(token::NUM_VAR, parseVarNumPair);
+            
 
+            
             registerInfix(token::PLUS, parseInfixExpression);
             registerInfix(token::MINUS, parseInfixExpression);
             registerInfix(token::MULT, parseInfixExpression);
             registerInfix(token::DIV, parseInfixExpression);
+            registerInfix(token::IMPLICIT_MULT, parseInfixExpression);
 
 
             nextToken();
@@ -70,7 +81,7 @@ class Parser {
 
         void nextToken() {
             curToken = peekToken;
-            peekToken = lexer.nextToken();
+            peekToken = lexer.getNextToken();
         }
 
         bool curTokenIs(TokenType t) {
@@ -106,10 +117,10 @@ class Parser {
 
         std::unique_ptr<ExpressionNode> parseLoop() {
             std::unique_ptr<ExpressionNode> expr;
-            while(curTokenIs(token::EOL) == false) {
+            // while(curTokenIs(token::EOL) == false) {
                 expr = parseMain();
-                nextToken();
-            }
+                // nextToken();
+            // }
 
             return expr;
         }
@@ -142,30 +153,47 @@ class Parser {
         */
         std::unique_ptr<ExpressionNode> parseExpression(int precedence) {
 
+
             // If the relevant prefix function (NUD) exists for the token, then
             // then get the function pointer to it and call it and store in leftExpr
             std::unique_ptr<ExpressionNode> leftExpr;
 
+
             if (prefixParseFnList.count(curToken.Type)) { 
+
                 prefixParseFn prefix = prefixParseFnList.at(curToken.Type); // NUD
                 leftExpr = (this->*prefix)();   // took a while to figure out. have to dereference pointer first
+
             } else {
+
                 noPrefixParseFnError(curToken.Type);
                 return nullptr;
+
             }
+
+            // Check for implicit multiplciation of coefficient-variable pairs
+            if ((curTokenIs(token::INT) && peekTokenIs(token::VAR)) || 
+               ( (curTokenIs(token::INT) || curTokenIs(token::VAR)) && peekTokenIs(token::LPAREN))) {
+                std::string ch = "*";
+                peekToken = insertToken(ch, token::IMPLICIT_MULT);
+            }
+
 
             // While we haven't reached the end, or the next token bp > current token bp
             // Continue parsing the left hand side
             while ((!peekTokenIs(token::EOL)) && (precedence < peekPrecedence())) {
                 infixParseFn infix; //LED
-
+                
                 if (infixParseFnList.count(peekToken.Type)) {
                     infix = infixParseFnList.at(peekToken.Type);
+
                 } else {
                     return leftExpr;
                 }
 
                 nextToken();
+
+
 
                 leftExpr = (this->*infix)(std::move(leftExpr));
             }
@@ -175,7 +203,15 @@ class Parser {
             
         }
 
+        Token insertToken(std::string& ch, TokenType type) {
+            lexer.insertToken(ch, type);
+            return Token{type, ch};
+        }
+       
+
         int peekPrecedence() {
+
+
             if (precedenceList.count(peekToken.Type)) {
                 return precedenceList.at(peekToken.Type);
             } else {
@@ -191,6 +227,30 @@ class Parser {
             }
         }
 
+        // std::unique_ptr<ExpressionNode> parseNumVar () { 
+
+        // }
+
+        // std::unique_ptr<ExpressionNode> parseVarNum() {
+        //     if (curTokenIs(token::INT)) {
+
+        //         if (peekTokenIs(token::VAR)) {
+        //             return parseImplicitMultiplication();
+        //         }
+
+        //         return parseNumber();
+
+        //     } else if (curTokenIs(token::VAR)) {
+
+        //         if (peekTokenIs(token::INT)) {
+        //             return parseImplicitMultiplication();
+        //         }
+
+        //         return parseVariable();
+
+
+        //     };
+        // }
 
         std::unique_ptr<ExpressionNode> parseVariable () {
             // std::cout << curToken.Literal << std::endl;
@@ -206,7 +266,7 @@ class Parser {
             return std::make_unique<NumberExpressionNode>(curToken, str_to_u64(curToken.Literal));
         }
 
-        std::unique_ptr<ExpressionNode> parsePrefixExpression() {
+        std::unique_ptr<ExpressionNode> parsePrefixExpression() { 
             // operand first
             std::unique_ptr<PrefixExpressionNode> expr = std::make_unique<PrefixExpressionNode>(*(curToken.Literal.c_str()), curToken);
             nextToken(); // consume prefix operand
@@ -228,6 +288,19 @@ class Parser {
             return expr;
         }
 
+        std::unique_ptr<ExpressionNode> parseGroupedExpression() {
+            nextToken();
+
+            auto expr = parseExpression(LOWEST);
+
+            if (!match(token::RPAREN)) {
+                return nullptr;
+            }
+
+            return expr;
+        }
+
+
 
         void registerPrefix(TokenType toktype, prefixParseFn fn) {
             prefixParseFnList.emplace(toktype, fn);
@@ -241,6 +314,9 @@ class Parser {
 };
 
 // Helper Functions
+
+// https://stackoverflow.com/questions/42356939/c-convert-string-to-uint64-t?noredirect=1&lq=1
+// Avizipi, 0xt 12 2021, accessed feb 5 2025
 uint64_t str_to_u64(std::string new_str) {
     uint64_t val = 0;
     for (auto ch : new_str) {
