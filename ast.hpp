@@ -4,6 +4,7 @@ ast.cpp
 Author: Shahbaz
 Date 26/01/2025
 */
+// See: https://lesleylai.info/en/ast-in-cpp-part-1-variant/ for visitor apttern 
 
 #ifndef AST_HPP
 #define AST_HPP
@@ -13,6 +14,7 @@ Date 26/01/2025
 #include <memory>
 #include <sstream>
 #include "token.hpp"
+#include "visitors.hpp"
 
 using u64 = uint64_t;
 
@@ -25,10 +27,14 @@ using u64 = uint64_t;
 // Base class for all expressions
 class ExpressionNode {
     public: 
+    
+        virtual ~ExpressionNode() = default;
+        
         virtual std::string TokenLiteral() = 0;
         virtual std::string String() = 0;
 
-        virtual ~ExpressionNode() = default;
+        virtual void accept(ExprVisitor& visitor) const  = 0;
+        virtual void accept(ExprMutableVisitor& visitor) = 0;
 };
 
 
@@ -37,10 +43,15 @@ class NumberExpressionNode : public ExpressionNode {
         Token Tok;   
         u64 Value;
 
+        NumberExpressionNode(Token tok, u64 Val) : Tok(tok), Value(Val) {}
+        
         std::string TokenLiteral() override { return Tok.Literal; };
         std::string String() override { return Tok.Literal; };
 
-        NumberExpressionNode(Token tok, u64 Val) : Tok(tok), Value(Val) {}
+        void accept(ExprVisitor& visitor) const override {visitor.visit(*this);}
+        void accept(ExprMutableVisitor& visitor) override {visitor.visit(*this);}
+
+
 };
 
 class VariableExpressionNode : public ExpressionNode {
@@ -48,10 +59,13 @@ class VariableExpressionNode : public ExpressionNode {
         std::string Value;
         Token Tok;    // token::VAR
 
+        VariableExpressionNode(const std::string &Name, Token &tok) : Value(Name), Tok(tok)  {}
+        
         virtual std::string TokenLiteral() override { return Tok.Literal; };
         virtual std::string String() override { return Value; };
 
-        VariableExpressionNode(const std::string &Name, Token &tok) : Value(Name), Tok(tok)  {}
+        void accept(ExprVisitor& visitor) const override {visitor.visit(*this);}
+        void accept(ExprMutableVisitor& visitor) override {visitor.visit(*this);}
 };
 
 
@@ -73,10 +87,13 @@ class PrefixExpressionNode : public ExpressionNode {
             std::string result = oss.str();
 
             return result;
-         };
-
-         PrefixExpressionNode(char Op, Token &tok, std::unique_ptr<ExpressionNode> Right = nullptr) 
+        };
+        
+        PrefixExpressionNode(char Op, Token &tok, std::unique_ptr<ExpressionNode> Right = nullptr) 
                 : Operator(Op), Tok(tok), Right(std::move(Right)) {}
+
+        void accept(ExprVisitor& visitor) const override {visitor.visit(*this);}
+        void accept(ExprMutableVisitor& visitor) override {visitor.visit(*this);}
 };
 
 class InfixExpressionNode : public ExpressionNode {
@@ -102,6 +119,9 @@ class InfixExpressionNode : public ExpressionNode {
 
          InfixExpressionNode(Token &tok, char Op,  std::unique_ptr<ExpressionNode> Left, std::unique_ptr<ExpressionNode> Right = nullptr) 
                 : Tok(tok), Operator(Op), Left(std::move(Left)), Right(std::move(Right)) {}
+        
+        void accept(ExprVisitor& visitor) const override {visitor.visit(*this);}
+        void accept(ExprMutableVisitor& visitor) override {visitor.visit(*this);}
 };
 
 #endif
