@@ -139,34 +139,6 @@ class NaryExpressionNode : public ExpressionNode {
         void accept(ExprMutableVisitor& visitor) override;
 };
 
-// class OperandListNode : public ExpressionNode {
-//     public: 
-//         std::vector<std::unique_ptr<ExpressionNode>> Operands;
-//         Token Tok; 
-//         char Operator;
-
-//         OperandListNode(Token tok, char op) : Tok(tok), Operator(op) {}
-
-//         void accept(ExprVisitor& visitor) const override {visitor.visit(*this);}
-//         void accept(ExprMutableVisitor& visitor) override {visitor.visit(*this);}
-
-//         std::string TokenLiteral() override { return Tok.Literal; }
-//         std::string String() override {
-//             std::ostringstream oss;
-//             oss << "(";
-//             for (size_t i = 0; i < Operands.size(); i++) {
-//                 oss << Operands[i]->String();
-//                 if (i < Operands.size() - 1)
-//                     oss << " * ";  // Assuming multiplication for now
-//             }
-//             oss << ")";
-//             return oss.str();
-//         }
-
-// };
-
-
-
 
 
 #endif
