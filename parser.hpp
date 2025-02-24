@@ -4,7 +4,7 @@ parse.hpp
 Author: 
 Data: 25/01/2025
 */
-
+//TODO: include copyright
 //TODO: use visitor pattern for eval/simplify stage
 // // g++ -Wall -std=c++20 -g -O0 -mconsole -o BIN/main Mathly/main.cpp Mathly/lexer.cpp
 
@@ -66,9 +66,9 @@ class Parser {
             
 
             
-            registerInfix(token::PLUS, parseInfixExpression);
+            registerInfix(token::PLUS, parseNaryExpression);
+            registerInfix(token::MULT, parseNaryExpression);
             registerInfix(token::MINUS, parseInfixExpression);
-            registerInfix(token::MULT, parseInfixExpression);
             registerInfix(token::DIV, parseInfixExpression);
             registerInfix(token::IMPLICIT_MULT, parseInfixExpression);
 
@@ -227,34 +227,10 @@ class Parser {
             }
         }
 
-        // std::unique_ptr<ExpressionNode> parseNumVar () { 
-
-        // }
-
-        // std::unique_ptr<ExpressionNode> parseVarNum() {
-        //     if (curTokenIs(token::INT)) {
-
-        //         if (peekTokenIs(token::VAR)) {
-        //             return parseImplicitMultiplication();
-        //         }
-
-        //         return parseNumber();
-
-        //     } else if (curTokenIs(token::VAR)) {
-
-        //         if (peekTokenIs(token::INT)) {
-        //             return parseImplicitMultiplication();
-        //         }
-
-        //         return parseVariable();
-
-
-        //     };
-        // }
 
         std::unique_ptr<ExpressionNode> parseVariable () {
             // std::cout << curToken.Literal << std::endl;
-            return std::make_unique<VariableExpressionNode>(curToken.Literal, curToken);
+            return std::make_unique<VariableExpressionNode>(curToken.Literal, curToken, InfixKind::VAR);
         }
         // ExpressionNode* parsePrefixExpression() {
         //     expr = PrefixExpressionNode();
@@ -263,12 +239,12 @@ class Parser {
         std::unique_ptr<ExpressionNode> parseNumber() {
 
             //TODO: perhaps some error handling for conversion
-            return std::make_unique<NumberExpressionNode>(curToken, str_to_u64(curToken.Literal));
+            return std::make_unique<NumberExpressionNode>(curToken, str_to_u64(curToken.Literal), InfixKind::NUM);
         }
 
         std::unique_ptr<ExpressionNode> parsePrefixExpression() { 
             // operand first
-            std::unique_ptr<PrefixExpressionNode> expr = std::make_unique<PrefixExpressionNode>(*(curToken.Literal.c_str()), curToken);
+            std::unique_ptr<PrefixExpressionNode> expr = std::make_unique<PrefixExpressionNode>(*(curToken.Literal.c_str()), curToken, InfixKind::PRE_MINUS);
             nextToken(); // consume prefix operand
 
             // now number
@@ -279,11 +255,36 @@ class Parser {
 
         std::unique_ptr<ExpressionNode> parseInfixExpression(std::unique_ptr<ExpressionNode> left) {
             //first left and operand
-            std::unique_ptr<InfixExpressionNode> expr = std::make_unique<InfixExpressionNode>(curToken, *(curToken.Literal.c_str()), std::move(left), nullptr);
+
+            InfixKind kind;
+            if (curToken.Type == token::MINUS) { kind = InfixKind::DIFFERENCE; }
+            else if (curToken.Type == token::DIV) { kind = InfixKind::FRACTION; }
+                
+
+            std::unique_ptr<InfixExpressionNode> expr = std::make_unique<InfixExpressionNode>(curToken, *(curToken.Literal.c_str()), kind, std::move(left), nullptr);
 
             int precedence = currentPrecedence(); // get lbp
             nextToken();
             expr->Right = parseExpression(precedence);
+
+            return expr;
+        }
+
+        std::unique_ptr<ExpressionNode> parseNaryExpression(std::unique_ptr<ExpressionNode> left) {
+            //first left and operand
+
+            InfixKind kind;
+            if (curToken.Type == token::PLUS) { kind = InfixKind::PLUS;} 
+            else if (curToken.Type == token::MULT) { kind = InfixKind::MULTIPLY; }
+                
+            std::vector<std::unique_ptr<ExpressionNode>> operands;
+            operands.push_back(std::move(left));
+
+            std::unique_ptr<NaryExpressionNode> expr = std::make_unique<NaryExpressionNode>(curToken, *(curToken.Literal.c_str()), kind, std::move(operands));
+
+            int precedence = currentPrecedence(); // get lbp
+            nextToken();
+            expr->Operands.push_back(parseExpression(precedence));
 
             return expr;
         }
