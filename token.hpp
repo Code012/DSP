@@ -19,6 +19,7 @@ class Token {
     public:
         TokenType Type;
         std::string Literal;
+        size_t i;
 };
 
 //research to use const or constexpr
@@ -28,6 +29,8 @@ const TokenType PLUS = "PLUS";
 const TokenType MINUS = "MINUS";
 const TokenType MULT = "MULT";
 const TokenType DIV = "DIV";
+
+const TokenType PRE_MINUS = "PRE_MINUS";
 
 const TokenType IMPLICIT_MULT = "IMPLICIT_MULT";
 

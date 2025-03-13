@@ -4,6 +4,7 @@ ast.cpp
 Author: Shahbaz
 Date 26/01/2025
 */
+//for making ast: https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/LangImpl02.html
 // See: https://lesleylai.info/en/ast-in-cpp-part-1-variant/ for visitor apttern 
 
 #ifndef AST_CPP
@@ -16,13 +17,13 @@ Date 26/01/2025
 
 
 // Number Node
-NumberExpressionNode::NumberExpressionNode(Token tok, u64 Val, InfixKind Kind) : Tok(tok), Value(Val), Kind(Kind) {}
+NumberExpressionNode::NumberExpressionNode(Token tok, int Val, InfixKind Kind) : Tok(tok), Value(Val), Kind(Kind) {}
 
-std::string NumberExpressionNode::TokenLiteral() { return Tok.Literal; }
-std::string NumberExpressionNode::String() { return Tok.Literal; }
+std::string NumberExpressionNode::TokenLiteral() const { return Tok.Literal; }
+std::string NumberExpressionNode::String() const { return Tok.Literal; }
 
 
-InfixKind NumberExpressionNode::getKind() { return Kind; }
+InfixKind NumberExpressionNode::getKind() const { return Kind; }
 
 void NumberExpressionNode::accept(ExprVisitor& visitor) const {visitor.visit(*this);}
 void NumberExpressionNode::accept(ExprMutableVisitor& visitor) {visitor.visit(*this);}
@@ -31,10 +32,10 @@ void NumberExpressionNode::accept(ExprMutableVisitor& visitor) {visitor.visit(*t
 // Variable Node
 VariableExpressionNode::VariableExpressionNode(const std::string &Name, Token &tok, InfixKind Kind) : Value(Name), Tok(tok), Kind(Kind)  {}
 
-std::string VariableExpressionNode::TokenLiteral() { return Tok.Literal; };
-std::string VariableExpressionNode::String() { return Value; };
+std::string VariableExpressionNode::TokenLiteral() const { return Tok.Literal; };
+std::string VariableExpressionNode::String() const { return Value; };
 
-InfixKind VariableExpressionNode::getKind() { return Kind; };
+InfixKind VariableExpressionNode::getKind() const { return Kind; };
 
 void VariableExpressionNode::accept(ExprVisitor& visitor) const {visitor.visit(*this);}
 void VariableExpressionNode::accept(ExprMutableVisitor& visitor) {visitor.visit(*this);}
@@ -45,9 +46,9 @@ void VariableExpressionNode::accept(ExprMutableVisitor& visitor) {visitor.visit(
 PrefixExpressionNode:: PrefixExpressionNode(char Op, Token &tok, InfixKind Kind, std::unique_ptr<ExpressionNode> Right) 
         : Operator(Op), Tok(tok), Kind(Kind), Right(std::move(Right)) {}
 
-std::string PrefixExpressionNode :: TokenLiteral() { return Tok.Literal; };
-InfixKind PrefixExpressionNode :: getKind() { return Kind; };
-std::string PrefixExpressionNode :: String() { 
+std::string PrefixExpressionNode :: TokenLiteral() const { return Tok.Literal; };
+InfixKind PrefixExpressionNode :: getKind() const  { return Kind; };
+std::string PrefixExpressionNode :: String() const { 
     std::ostringstream oss;
 
     oss << "(";
@@ -68,9 +69,9 @@ void PrefixExpressionNode :: accept(ExprMutableVisitor& visitor) {visitor.visit(
 
 // INFIX NODE
 
-std::string InfixExpressionNode :: TokenLiteral()  { return Tok.Literal; };
-InfixKind  InfixExpressionNode :: getKind() { return Kind; };
-std::string InfixExpressionNode :: String()  { 
+std::string InfixExpressionNode :: TokenLiteral() const { return Tok.Literal; };
+InfixKind  InfixExpressionNode :: getKind() const { return Kind; };
+std::string InfixExpressionNode :: String() const { 
     std::ostringstream oss;
 
     oss << "(";
@@ -98,11 +99,11 @@ void InfixExpressionNode :: accept(ExprMutableVisitor& visitor)  {visitor.visit(
 NaryExpressionNode :: NaryExpressionNode(Token &tok, char Op, InfixKind Kind, std::vector<std::unique_ptr<ExpressionNode>> ops)
 : Tok(tok), Operator(Op), Kind(Kind), Operands(std::move(ops)) {}
 
-std::string NaryExpressionNode :: TokenLiteral()  { return Tok.Literal; }
-InfixKind NaryExpressionNode :: getKind()  { return Kind; }
+std::string NaryExpressionNode :: TokenLiteral() const { return Tok.Literal; }
+InfixKind NaryExpressionNode :: getKind() const { return Kind; }
 
 
-std::string NaryExpressionNode :: String()  {
+std::string NaryExpressionNode :: String() const {
     std::ostringstream oss;
     oss << "(";
     for (size_t i = 0; i < Operands.size(); i++) {

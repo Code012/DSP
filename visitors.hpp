@@ -54,5 +54,7 @@ class AssociativeTransformationVisitor : public ExprMutableVisitor {
         void flattenOperands(std::unique_ptr<ExpressionNode>& node, InfixKind kind, std::vector<std::unique_ptr<ExpressionNode>>& flattenedOperands);
            
 };
-    
+
+
+
 #endif        

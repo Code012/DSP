@@ -30,8 +30,9 @@ class Lexer {
     
         Lexer(std::string& input);
         std::vector<Token> lex();
-        const Token tokenise();
+        const Token tokenise(size_t tok_index);
         void insertToken(std::string& ch, TokenType type);
+        bool findDuplicate(const Token tok, const size_t cur_i);
         Token getNextToken();
         void skipWhitespace();
         void readChar();
@@ -40,7 +41,7 @@ class Lexer {
         std::string readNumber();
         bool isVariableNext();
         bool isNumberNext();
-        const Token newToken(TokenType, char ch);
+        const Token newToken(TokenType, char ch, size_t tok_index);
 };
 
 // Helper functions
@@ -53,11 +54,13 @@ Lexer::Lexer(std::string& i) : input(i) {
 }
 
 std::vector<Token> Lexer::lex() {
+    size_t tok_index = 0;
     while (ch != '$') {
-        tokens.push_back(tokenise());
+        ++tok_index;
+        tokens.push_back(tokenise(tok_index));       //TODO: just move the tokenise function in here, and instead of returning a token just push to the tokens vector
     }
 
-    tokens.push_back(newToken(token::EOL, ch));
+    tokens.push_back(newToken(token::EOL, ch, tok_index));
     return tokens;
 }
 
@@ -72,7 +75,20 @@ void Lexer::insertToken(std::string& ch, TokenType type) {
     tokens.insert(tokens.begin() + tokenPosition - 1, Token{type, ch});
 }
 
-const Token Lexer::tokenise() {
+// finds the same token after the current index position
+bool Lexer::findDuplicate(const Token tok, const size_t current_index) {
+
+    for (size_t i = current_index; i < tokens.size(); i++) {
+
+        if ((tokens[i].Type == tok.Type) && (tokens[i].Literal == tok.Literal)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+const Token Lexer::tokenise(size_t tok_index) {
     Token tok;
     
     
@@ -81,22 +97,22 @@ const Token Lexer::tokenise() {
 
     switch (ch) {
         case '+':
-            tok = newToken(token::PLUS, ch);
+            tok = newToken(token::PLUS, ch, tok_index);
             break;
         case '-':
-            tok = newToken(token::MINUS, ch);
+            tok = newToken(token::MINUS, ch, tok_index);
             break;
         case '*':
-            tok = newToken(token::MULT, ch);
+            tok = newToken(token::MULT, ch, tok_index);
             break;
         case '/':
-            tok = newToken(token::DIV, ch);
+            tok = newToken(token::DIV, ch, tok_index);
             break;
         case '(':
-            tok = newToken(token::LPAREN, ch);
+            tok = newToken(token::LPAREN, ch, tok_index);
             break;
         case ')':
-        tok = newToken(token::RPAREN, ch);
+        tok = newToken(token::RPAREN, ch, tok_index);
         break;
         // case '$':
         //     tok = newToken(token::EOL, ch);
@@ -105,25 +121,27 @@ const Token Lexer::tokenise() {
             if( isLetter(ch)) {                
                 tok.Literal = readVariable();
                 tok.Type = token::VAR;
+                tok.i = tok_index;
 
-                if ( isNumberNext() ) {
-                    tok.Type = token::VAR_NUM;
-                }
+                // if ( isNumberNext() ) {
+                //     tok.Type = token::VAR_NUM;
+                // }
 
                 return tok;
 
             } else if (isNumber(ch)) {                
                 tok.Literal = readNumber();
                 tok.Type = token::INT;
+                tok.i = tok_index;
 
-                if ( isVariableNext() ) {
-                    tok.Type = token::NUM_VAR;
-                }
+                // if ( isVariableNext() ) {
+                //     tok.Type = token::NUM_VAR;
+                // }
 
                 return tok;
 
             } else {
-                tok = newToken(token::ILLEGAL, ch);
+                tok = newToken(token::ILLEGAL, ch, tok_index);
             }
     }
 
@@ -197,9 +215,9 @@ bool isNumber(char ch) {
     return '0' <= ch && ch <= '9';
 }
 
-const Token Lexer::newToken(TokenType tokenType, char ch) {
+const Token Lexer::newToken(TokenType tokenType, char ch, size_t tok_index) {
     char buffer[2] = {ch, '\0'};        // null terminate string
-    return Token{tokenType, std::string(buffer)};
+    return Token{tokenType, std::string(buffer), tok_index};
 }
 
 #endif

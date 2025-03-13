@@ -4,6 +4,7 @@ ast.cpp
 Author: Shahbaz
 Date 26/01/2025
 */
+// for making ast: https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/LangImpl02.html
 // See: https://lesleylai.info/en/ast-in-cpp-part-1-variant/ for visitor apttern 
 
 #ifndef AST_HPP
@@ -31,7 +32,7 @@ enum class InfixKind;
 
 using u64 = uint64_t;
 
-enum class InfixKind {PLUS, MULTIPLY, POWER, DIFFERENCE, FRACTION, NUM, VAR, PRE_MINUS};
+enum class InfixKind {PLUS, MULTIPLY, POWER, DIFFERENCE, DIVIDE, FRACTION, NUM, VAR, PRE_MINUS};
 
 
 // Base class for all expressions
@@ -40,9 +41,9 @@ class ExpressionNode {
     
         virtual ~ExpressionNode() = default;
         
-        virtual std::string TokenLiteral() = 0;
-        virtual std::string String() = 0;
-        virtual InfixKind getKind() = 0;
+        virtual std::string TokenLiteral() const = 0;
+        virtual std::string String() const = 0;
+        virtual InfixKind getKind() const = 0;
 
         virtual void accept(ExprVisitor& visitor) const  = 0;
         virtual void accept(ExprMutableVisitor& visitor) = 0;
@@ -52,14 +53,14 @@ class ExpressionNode {
 class NumberExpressionNode : public ExpressionNode {
     public:
         Token Tok;   
-        u64 Value;
+        int Value;  //TODO:change this to a double when rewriting
         InfixKind Kind;
 
-        NumberExpressionNode(Token tok, u64 Val, InfixKind Kind);
+        NumberExpressionNode(Token tok, int Val, InfixKind Kind);
         
-        std::string TokenLiteral() override;
-        std::string String() override;
-        InfixKind getKind() override;
+        std::string TokenLiteral() const override;
+        std::string String() const override;
+        InfixKind getKind() const override;
 
         void accept(ExprVisitor& visitor) const override;
         void accept(ExprMutableVisitor& visitor) override;
@@ -75,9 +76,9 @@ class VariableExpressionNode : public ExpressionNode {
 
         VariableExpressionNode(const std::string &Name, Token &tok, InfixKind Kind);
         
-        virtual std::string TokenLiteral() override;
-        virtual std::string String() override;
-        InfixKind getKind() override;
+        virtual std::string TokenLiteral() const override;
+        virtual std::string String() const override;
+        InfixKind getKind() const override;
 
         void accept(ExprVisitor& visitor) const override;
         void accept(ExprMutableVisitor& visitor) override;
@@ -93,9 +94,9 @@ class PrefixExpressionNode : public ExpressionNode {    //* RENAME TO UNARY
 
         PrefixExpressionNode(char Op, Token &tok, InfixKind Kind, std::unique_ptr<ExpressionNode> Right = nullptr);
 
-        std::string TokenLiteral() override;
-        InfixKind getKind() override;
-        std::string String() override;
+        std::string TokenLiteral() const override;
+        InfixKind getKind() const override;
+        std::string String() const override;
         
         
 
@@ -111,9 +112,9 @@ class InfixExpressionNode : public ExpressionNode { //* RENAME TO BINARY WHEN YO
         std::unique_ptr<ExpressionNode> Left, Right;
         
 
-        std::string TokenLiteral() override;
-        InfixKind getKind() override;
-        std::string String() override;
+        std::string TokenLiteral() const override;
+        InfixKind getKind() const override;
+        std::string String() const override;
 
          InfixExpressionNode(Token &tok, char Op, InfixKind Kind, std::unique_ptr<ExpressionNode> Left, std::unique_ptr<ExpressionNode> Right = nullptr);
         
@@ -127,13 +128,13 @@ class NaryExpressionNode : public ExpressionNode {
         Token Tok;      // +, *
         char Operator;
         InfixKind Kind;
-        std::vector<std::unique_ptr<ExpressionNode>> Operands;
+        std::vector<std::unique_ptr<ExpressionNode>> Operands;  //TODO: a vector of unique pointers is not very good, all those pointers are allocated in random areas in memory, better to use an area allocator. Use areas when re writing everything for report
 
         NaryExpressionNode(Token &tok, char Op, InfixKind Kind, std::vector<std::unique_ptr<ExpressionNode>> ops);
 
-        std::string TokenLiteral() override;
-        InfixKind getKind() override;
-        std::string String() override;
+        std::string TokenLiteral() const override;
+        InfixKind getKind() const override;
+        std::string String() const override;
 
         void accept(ExprVisitor& visitor) const override;
         void accept(ExprMutableVisitor& visitor) override;

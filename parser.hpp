@@ -4,8 +4,11 @@ parse.hpp
 Author: 
 Data: 25/01/2025
 */
+// for writing parser: https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/LangImpl02.html
+//                      https://matklad.github.io/2020/04/13/simple-but-powerful-pratt-parsing.html
+//                      https://journal.stuffwithstuff.com/2011/03/19/pratt-parsers-expression-parsing-made-easy/ 
+//  https://www.youtube.com/watch?v=2l1Si4gSb9A helped in intuitvely understanding pratt parsing
 //TODO: include copyright
-//TODO: use visitor pattern for eval/simplify stage
 // // g++ -Wall -std=c++20 -g -O0 -mconsole -o BIN/main Mathly/main.cpp Mathly/lexer.cpp
 
 #include <unordered_map>
@@ -68,9 +71,9 @@ class Parser {
             
             registerInfix(token::PLUS, parseNaryExpression);
             registerInfix(token::MULT, parseNaryExpression);
+            registerInfix(token::IMPLICIT_MULT, parseNaryExpression);
             registerInfix(token::MINUS, parseInfixExpression);
             registerInfix(token::DIV, parseInfixExpression);
-            registerInfix(token::IMPLICIT_MULT, parseInfixExpression);
 
 
             nextToken();
@@ -172,8 +175,8 @@ class Parser {
             }
 
             // Check for implicit multiplciation of coefficient-variable pairs
-            if ((curTokenIs(token::INT) && peekTokenIs(token::VAR)) || 
-               ( (curTokenIs(token::INT) || curTokenIs(token::VAR)) && peekTokenIs(token::LPAREN))) {
+            if ((curTokenIs(token::INT) && peekTokenIs(token::VAR)) ||  // 2x, 12x, 1232x
+               ( (curTokenIs(token::INT) || curTokenIs(token::VAR)) && peekTokenIs(token::LPAREN))) {   // 2(), x()
                 std::string ch = "*";
                 peekToken = insertToken(ch, token::IMPLICIT_MULT);
             }
@@ -239,7 +242,7 @@ class Parser {
         std::unique_ptr<ExpressionNode> parseNumber() {
 
             //TODO: perhaps some error handling for conversion
-            return std::make_unique<NumberExpressionNode>(curToken, str_to_u64(curToken.Literal), InfixKind::NUM);
+            return std::make_unique<NumberExpressionNode>(curToken, std::stoi(curToken.Literal), InfixKind::NUM);
         }
 
         std::unique_ptr<ExpressionNode> parsePrefixExpression() { 
@@ -258,7 +261,7 @@ class Parser {
 
             InfixKind kind;
             if (curToken.Type == token::MINUS) { kind = InfixKind::DIFFERENCE; }
-            else if (curToken.Type == token::DIV) { kind = InfixKind::FRACTION; }
+            else if (curToken.Type == token::DIV) { kind = InfixKind::DIVIDE; }
                 
 
             std::unique_ptr<InfixExpressionNode> expr = std::make_unique<InfixExpressionNode>(curToken, *(curToken.Literal.c_str()), kind, std::move(left), nullptr);
@@ -275,7 +278,7 @@ class Parser {
 
             InfixKind kind;
             if (curToken.Type == token::PLUS) { kind = InfixKind::PLUS;} 
-            else if (curToken.Type == token::MULT) { kind = InfixKind::MULTIPLY; }
+            else if (curToken.Type == token::MULT || curToken.Type == token::IMPLICIT_MULT ) { kind = InfixKind::MULTIPLY; }
                 
             std::vector<std::unique_ptr<ExpressionNode>> operands;
             operands.push_back(std::move(left));
